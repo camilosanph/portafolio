@@ -18,3 +18,8 @@ public/media/
 
 # next generated
 next-env.d.ts
+
+# Payload local-disk uploads (dev only; prod uses Vercel Blob, seed regenerates)
+/media/
+# TypeScript incremental build cache
+tsconfig.tsbuildinfo
