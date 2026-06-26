@@ -15,3 +15,6 @@ public/media/
 # misc
 .DS_Store
 *.log
+
+# next generated
+next-env.d.ts
