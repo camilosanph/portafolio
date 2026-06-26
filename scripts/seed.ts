@@ -238,6 +238,7 @@ async function seed() {
         title: d.title,
         slug: d.slug,
         order: d.order,
+        published: true,
         tool: d.tool,
         feature: d.feature,
         gridRatio: d.gridRatio,

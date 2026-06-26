@@ -204,6 +204,10 @@ export interface Media {
  */
 export interface Discipline {
   id: number;
+  /**
+   * When off, this discipline is hidden everywhere on the site — its page returns 404, and it is removed from the home index, the nav and the contact form. Turn off while preparing content; turn on to publish.
+   */
+  published?: boolean | null;
   title: string;
   /**
    * URL slug, e.g. "color-grading". Avoid changing once live.
@@ -419,6 +423,7 @@ export interface MediaSelect<T extends boolean = true> {
  * via the `definition` "disciplines_select".
  */
 export interface DisciplinesSelect<T extends boolean = true> {
+  published?: T;
   title?: T;
   slug?: T;
   order?: T;

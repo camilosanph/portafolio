@@ -24,7 +24,8 @@ async function findDiscipline(slug: string, lang: 'en' | 'es') {
   const payload = await getPayloadClient()
   const res = await payload.find({
     collection: 'disciplines',
-    where: { slug: { equals: slug } },
+    // Only published disciplines are reachable; a hidden one's URL 404s.
+    where: { slug: { equals: slug }, published: { equals: true } },
     locale: lang,
     depth: 2,
     limit: 1,
@@ -64,13 +65,24 @@ export default async function AreaPage({
   const [discipline, settings, allDiscRes] = await Promise.all([
     findDiscipline(slug, lang),
     payload.findGlobal({ slug: 'site-settings', locale: lang, depth: 1 }),
-    payload.find({ collection: 'disciplines', locale: lang, sort: 'order', limit: 10, depth: 0 }),
+    payload.find({
+      collection: 'disciplines',
+      where: { published: { equals: true } },
+      locale: lang,
+      sort: 'order',
+      limit: 10,
+      depth: 0,
+    }),
   ])
 
   if (!discipline) notFound()
 
   const allDisciplines = allDiscRes.docs
   const total = allDisciplines.length || 4
+  // Number by position among the visible disciplines (so hiding one re-sequences
+  // 01–0N cleanly instead of leaving gaps).
+  const idx = allDisciplines.findIndex((d) => d.id === discipline.id)
+  const position = idx >= 0 ? idx : (discipline.order ?? 0)
   const email = settings.contactEmail || SITE.contactEmail
   const socials = (settings.socials ?? []) as SocialLink[]
   const navItems: NavItem[] = [
@@ -90,7 +102,7 @@ export default async function AreaPage({
     <main>
       <AreaHeader wordmark={settings.wordmark || SITE.wordmark} navItems={navItems} lang={lang} />
       <TitleBlock
-        meta={`${disciplineMeta(discipline.order ?? 0, total)}${discipline.tool ? ` — ${discipline.tool}` : ''}`}
+        meta={`${disciplineMeta(position, total)}${discipline.tool ? ` — ${discipline.tool}` : ''}`}
         title={discipline.title}
         blurb={discipline.pageBlurb}
       />

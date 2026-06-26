@@ -9,11 +9,21 @@ export const Disciplines: CollectionConfig = {
   access: { read: () => true },
   admin: {
     useAsTitle: 'title',
-    defaultColumns: ['title', 'order', 'feature', 'tool'],
+    defaultColumns: ['title', 'published', 'order', 'feature', 'tool'],
     description: 'The four discipline pages. Edit copy, images and the project grid for each.',
   },
   defaultSort: 'order',
   fields: [
+    {
+      name: 'published',
+      type: 'checkbox',
+      defaultValue: true,
+      admin: {
+        position: 'sidebar',
+        description:
+          'When off, this discipline is hidden everywhere on the site — its page returns 404, and it is removed from the home index, the nav and the contact form. Turn off while preparing content; turn on to publish.',
+      },
+    },
     { name: 'title', type: 'text', required: true, localized: true },
     {
       name: 'slug',

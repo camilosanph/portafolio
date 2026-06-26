@@ -21,13 +21,13 @@ export function DisciplinesIndex({
       <div className="mb-9 font-mono text-[11px] uppercase tracking-label text-muted">
         {dict.home.fourDisciplines}
       </div>
-      {disciplines.map((d) => (
+      {disciplines.map((d, i) => (
         <Link
           key={d.id}
           href={`/${lang}/${d.slug}`}
           className="group grid grid-cols-[56px_1fr] items-center gap-7 border-t border-line py-8 sm:grid-cols-[78px_1fr_auto]"
         >
-          <span className="font-mono text-[12px] text-accent">{disciplineNumber(d.order ?? 0)}</span>
+          <span className="font-mono text-[12px] text-accent">{disciplineNumber(i)}</span>
           <span className="font-serif text-[clamp(30px,6vw,72px)] font-normal leading-none tracking-[0.01em] transition-colors group-hover:text-accent">
             {d.title}
           </span>

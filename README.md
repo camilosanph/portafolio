@@ -50,7 +50,10 @@ Useful scripts: `npm run dev | build | start | lint | typecheck | test | seed | 
    - **Home Page** — the full-bleed **hero image**, the italic **value statement**, and the three
      **proof-strip** photos.
 3. **Collections**:
-   - **Disciplines** — the four pages. For each: title, slug, tools line, the home + page blurbs, the
+   - **Disciplines** — the four pages. Each has a **Published** toggle in the sidebar: turn it off to
+     hide a discipline from the site (its page 404s and it's pulled from the home index, nav and contact
+     form) while you prepare its content; turn it on to publish. For each: title, slug, tools line, the
+     home + page blurbs, the
      **signature feature** (filter grid / before-after / showreel) and grid aspect ratio, and the
      **projects** grid (image + title + meta + an optional colour tag used by the Color Grading filter).
      Retouching shows **before/after** image fields; the showreel disciplines show a **showreel URL**

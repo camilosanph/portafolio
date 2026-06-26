@@ -46,7 +46,14 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
   const [home, settings, discRes] = await Promise.all([
     payload.findGlobal({ slug: 'home', locale: lang, depth: 1 }),
     payload.findGlobal({ slug: 'site-settings', locale: lang, depth: 1 }),
-    payload.find({ collection: 'disciplines', locale: lang, sort: 'order', limit: 10, depth: 1 }),
+    payload.find({
+      collection: 'disciplines',
+      where: { published: { equals: true } },
+      locale: lang,
+      sort: 'order',
+      limit: 10,
+      depth: 1,
+    }),
   ])
 
   const disciplines = discRes.docs

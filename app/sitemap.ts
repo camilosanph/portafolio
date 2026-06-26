@@ -7,7 +7,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let slugs: string[] = []
   try {
     const payload = await getPayloadClient()
-    const res = await payload.find({ collection: 'disciplines', limit: 50, depth: 0, sort: 'order' })
+    const res = await payload.find({
+      collection: 'disciplines',
+      where: { published: { equals: true } },
+      limit: 50,
+      depth: 0,
+      sort: 'order',
+    })
     slugs = res.docs.map((d) => d.slug).filter((s): s is string => Boolean(s))
   } catch {
     // DB may be unavailable during build; fall back to static paths only.
