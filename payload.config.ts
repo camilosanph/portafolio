@@ -10,6 +10,7 @@ import { vercelBlobStorage } from '@payloadcms/storage-vercel-blob'
 import sharp from 'sharp'
 
 import { LOCALES, DEFAULT_LOCALE } from './lib/i18n/config'
+import { migrations } from './migrations'
 import { Users } from './payload/collections/Users'
 import { Media } from './payload/collections/Media'
 import { Disciplines } from './payload/collections/Disciplines'
@@ -28,7 +29,14 @@ const usePostgres = databaseURI.startsWith('postgres')
 // Production uses Postgres — DATABASE_URI, or Vercel/Neon's POSTGRES_URL / DATABASE_URL.
 // Local dev falls back to a file-based SQLite DB so the CMS runs with zero setup.
 const db = usePostgres
-  ? postgresAdapter({ pool: { connectionString: databaseURI } })
+  ? postgresAdapter({
+      pool: { connectionString: databaseURI },
+      // In production (NODE_ENV=production, e.g. Vercel) the adapter auto-runs
+      // these migrations on first connect — creating the schema with no separate
+      // build step. Locally (dev/SQLite) they're ignored; SQLite auto-syncs.
+      // Regenerate after schema changes: `DATABASE_URI=postgres://… payload migrate:create`.
+      prodMigrations: migrations,
+    })
   : sqliteAdapter({ client: { url: databaseURI } })
 
 // The Vercel Blob adapter ALWAYS registers a client-side upload handler

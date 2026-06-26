@@ -74,15 +74,17 @@ Useful scripts: `npm run dev | build | start | lint | typecheck | test | seed | 
 Self-hosted: **you own the database and media** (Postgres + a Vercel Blob store on your own account).
 
 ### 1. Database — Postgres
-Create a Postgres DB (e.g. [Neon](https://neon.tech)) → `DATABASE_URI=postgres://…` (any `postgres://`
-URI switches the adapter from SQLite to Postgres). Locally SQLite auto-syncs; for Postgres, generate +
-run migrations:
+Create a Postgres DB (e.g. [Neon](https://neon.tech)) and set `DATABASE_URI=postgres://…` in Vercel (any
+`postgres://` URI switches the adapter from SQLite to Postgres). The initial schema migration is committed
+in `migrations/` and wired as `prodMigrations` in `payload.config.ts`, so **production auto-applies it on
+first connect** — no migrate build step or build-command change needed.
+
+After any future schema change (collections/fields), regenerate the migration against a Postgres DB and
+commit it:
 ```bash
-DATABASE_URI=postgres://… npm run payload migrate:create   # commit the generated migrations/
-DATABASE_URI=postgres://… npm run payload migrate          # apply (also on each deploy)
+DATABASE_URI=postgres://… PAYLOAD_SECRET=… npx payload migrate:create <name>   # then commit migrations/
 ```
-On Vercel set the build command to `payload migrate && next build`. (Simplest alternative for this small
-schema: `push: true` on `postgresAdapter` in `payload.config.ts`.)
+(Local dev uses SQLite and auto-syncs the schema; migrations only run in production.)
 
 ### 2. Media storage — Vercel Blob
 Vercel's filesystem is ephemeral, so uploads go to a [Vercel Blob](https://vercel.com/docs/vercel-blob)
