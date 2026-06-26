@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { resolveLocale, isLocale, DEFAULT_LOCALE } from '../config'
+import { resolveLocale, isLocale, negotiateLocale, DEFAULT_LOCALE } from '../config'
 
 describe('i18n config', () => {
   it('accepts valid locales', () => {
@@ -18,5 +18,19 @@ describe('i18n config', () => {
   })
   it('passes through a valid locale', () => {
     expect(resolveLocale('es')).toBe('es')
+  })
+})
+
+describe('negotiateLocale', () => {
+  it('prefers a valid cookie choice', () => {
+    expect(negotiateLocale('en-US,en;q=0.9', 'es')).toBe('es')
+  })
+  it('falls back to Accept-Language', () => {
+    expect(negotiateLocale('es-ES,es;q=0.9', null)).toBe('es')
+    expect(negotiateLocale('en-GB,en;q=0.9', undefined)).toBe('en')
+  })
+  it('defaults when nothing matches', () => {
+    expect(negotiateLocale('fr-FR,fr;q=0.9', null)).toBe(DEFAULT_LOCALE)
+    expect(negotiateLocale(null, null)).toBe('en')
   })
 })
