@@ -29,14 +29,22 @@ const usePostgres = databaseURI.startsWith('postgres')
 
 // Production uses Postgres — DATABASE_URI, or Vercel/Neon's POSTGRES_URL / DATABASE_URL.
 // Local dev falls back to a file-based SQLite DB so the CMS runs with zero setup.
+// Auto-run migrations on connect — EXCEPT on Vercel Preview/Development builds.
+// Vercel builds every deployment (PR previews included) with NODE_ENV=production,
+// so a preview build would otherwise run migrations against whatever DB it
+// connects to. If Preview shares Production's DATABASE_URI, a PR's preview build
+// would mutate the production schema before the PR ever merges (this happened —
+// a preview dropped a table prod was still serving). VERCEL_ENV is
+// 'production' | 'preview' | 'development'; only the latter two skip. Non-Vercel
+// production (VERCEL_ENV unset) still auto-migrates.
+const skipAutoMigrate =
+  process.env.VERCEL_ENV === 'preview' || process.env.VERCEL_ENV === 'development'
+
 const db = usePostgres
   ? postgresAdapter({
       pool: { connectionString: databaseURI },
-      // In production (NODE_ENV=production, e.g. Vercel) the adapter auto-runs
-      // these migrations on first connect — creating the schema with no separate
-      // build step. Locally (dev/SQLite) they're ignored; SQLite auto-syncs.
       // Regenerate after schema changes: `DATABASE_URI=postgres://… payload migrate:create`.
-      prodMigrations: migrations,
+      prodMigrations: skipAutoMigrate ? undefined : migrations,
     })
   : sqliteAdapter({ client: { url: databaseURI } })
 
