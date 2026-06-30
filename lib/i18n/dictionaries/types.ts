@@ -12,6 +12,7 @@ export interface Dictionary {
   }
   area: {
     playShowreel: string
+    playVideo: string
     before: string
     after: string
   }

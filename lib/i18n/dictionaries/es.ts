@@ -12,6 +12,7 @@ export const es: Dictionary = {
   },
   area: {
     playShowreel: 'Ver showreel',
+    playVideo: 'Reproducir video',
     before: 'Antes',
     after: 'Después',
   },
