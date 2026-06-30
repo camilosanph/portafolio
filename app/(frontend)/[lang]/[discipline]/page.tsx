@@ -8,6 +8,7 @@ import { mediaUrl } from '@/lib/media'
 import { pageMetadata } from '@/lib/seo'
 import { SITE } from '@/lib/site'
 import { disciplineMeta } from '@/lib/disciplines'
+import { projectHref } from '@/lib/projects'
 import type { SocialLink } from '@/lib/socials'
 import type { NavItem } from '@/components/chrome/Nav'
 import { AreaHeader } from '@/components/chrome/AreaHeader'
@@ -42,12 +43,27 @@ export async function generateMetadata({
   const lang = resolveLocale(raw)
   const discipline = await findDiscipline(slug, lang)
   if (!discipline) return {}
+  // OG image: the first published project's cover, falling back to the
+  // discipline's signature image.
+  const payload = await getPayloadClient()
+  const firstProj = await payload.find({
+    collection: 'projects',
+    where: { and: [{ discipline: { equals: discipline.id } }, { published: { equals: true } }] },
+    locale: lang,
+    sort: 'order',
+    depth: 1,
+    limit: 1,
+  })
+  const ogImage =
+    mediaUrl(firstProj.docs[0]?.cover, 'card') ??
+    mediaUrl(discipline.showreelPoster, 'card') ??
+    mediaUrl(discipline.beforeImage, 'card')
   return pageMetadata({
     lang,
     path: `/${slug}`,
     title: `${discipline.title} — ${SITE.name}`,
     description: discipline.pageBlurb || discipline.homeBlurb || undefined,
-    image: mediaUrl(discipline.projects?.[0]?.image, 'card'),
+    image: ogImage,
   })
 }
 
@@ -77,6 +93,16 @@ export default async function AreaPage({
 
   if (!discipline) notFound()
 
+  const projRes = await payload.find({
+    collection: 'projects',
+    where: { and: [{ discipline: { equals: discipline.id } }, { published: { equals: true } }] },
+    locale: lang,
+    sort: 'order',
+    depth: 1,
+    limit: 100,
+  })
+  const projects = projRes.docs
+
   const allDisciplines = allDiscRes.docs
   const total = allDisciplines.length || 4
   // Number by position among the visible disciplines (so hiding one re-sequences
@@ -92,10 +118,11 @@ export default async function AreaPage({
   const projectTypes = allDisciplines.map((d) => d.title)
 
   const ratio = discipline.gridRatio || '4/5'
-  const baseItems = (discipline.projects ?? []).map((p) => ({
-    imageUrl: mediaUrl(p.image, 'card'),
+  const baseItems = projects.map((p) => ({
+    imageUrl: mediaUrl(p.cover, 'card'),
     title: p.title,
     meta: p.meta,
+    href: projectHref(lang, slug, p.slug),
   })) satisfies GridItem[]
 
   return (
@@ -124,11 +151,12 @@ export default async function AreaPage({
         )}
         {discipline.feature === 'filter' ? (
           <FilterGrid
-            items={(discipline.projects ?? []).map((p) => ({
-              imageUrl: mediaUrl(p.image, 'card'),
+            items={projects.map((p) => ({
+              imageUrl: mediaUrl(p.cover, 'card'),
               title: p.title,
               meta: p.meta,
               tag: p.tag,
+              href: projectHref(lang, slug, p.slug),
             }))}
             ratio={ratio}
             dict={dict}
