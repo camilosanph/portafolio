@@ -30,7 +30,9 @@ export function BeforeAfter({
           src={afterUrl}
           alt=""
           className="absolute inset-0 h-full w-full object-cover"
-          style={{ clipPath: `inset(0 ${100 - ba}% 0 0)` }}
+          // Reveal the "after" on the RIGHT of the handle, so it sits under the
+          // "After" label; the "before" base shows on the left under "Before".
+          style={{ clipPath: `inset(0 0 0 ${ba}%)` }}
         />
       )}
 

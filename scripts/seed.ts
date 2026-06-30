@@ -14,16 +14,34 @@ import config from '../payload.config'
 const UNSPLASH = (id: string) =>
   `https://images.unsplash.com/photo-${id}?w=1600&q=80&auto=format&fit=crop`
 
-// Fetch an Unsplash placeholder once and upload it into Media; reuse on repeat
-// ids (and across runs, by filename). Resilient: returns null on fetch failure
-// so the seed still completes (the image field is simply left empty).
-async function uploadImage(
-  payload: Payload,
-  id: string,
-  cache: Map<string, number>,
-): Promise<number | null> {
-  if (cache.has(id)) return cache.get(id)!
-  const name = `${id}.jpg`
+// Download each Unsplash placeholder at most once (cached by id). Failures are
+// cached too, so a flaky photo isn't retried on every slot that reuses it.
+const bytesCache = new Map<string, Buffer | null>()
+async function fetchBytes(id: string): Promise<Buffer | null> {
+  if (bytesCache.has(id)) return bytesCache.get(id)!
+  try {
+    const res = await fetch(UNSPLASH(id))
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const data = Buffer.from(await res.arrayBuffer())
+    bytesCache.set(id, data)
+    return data
+  } catch (e) {
+    console.warn(`  ! image ${id} failed: ${(e as Error).message}`)
+    bytesCache.set(id, null)
+    return null
+  }
+}
+
+// Create a DISTINCT media document per slot (keyed by a stable, readable name
+// like "retouching-before"). This is the important part: every image field on
+// the site points to its OWN media doc, so replacing one image in the admin
+// never changes another image elsewhere — even when the placeholder photo
+// happens to be reused across slots. Idempotent and non-clobbering: re-runs
+// reuse the slot's doc by filename and never touch Camilo's own uploads (which
+// have different filenames). Returns null on fetch failure so the seed still
+// completes (the field is simply left empty).
+async function uploadSlot(payload: Payload, slot: string, id: string): Promise<number | null> {
+  const name = `${slot}.jpg`
 
   const existing = await payload.find({
     collection: 'media',
@@ -31,28 +49,16 @@ async function uploadImage(
     limit: 1,
     depth: 0,
   })
-  if (existing.docs[0]) {
-    const docId = existing.docs[0].id as number
-    cache.set(id, docId)
-    return docId
-  }
+  if (existing.docs[0]) return existing.docs[0].id as number
 
-  try {
-    const res = await fetch(UNSPLASH(id))
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    const data = Buffer.from(await res.arrayBuffer())
-    const doc = await payload.create({
-      collection: 'media',
-      data: { alt: '' },
-      file: { data, mimetype: 'image/jpeg', name, size: data.length },
-    })
-    const docId = doc.id as number
-    cache.set(id, docId)
-    return docId
-  } catch (e) {
-    console.warn(`  ! image ${id} failed: ${(e as Error).message}`)
-    return null
-  }
+  const data = await fetchBytes(id)
+  if (!data) return null
+  const doc = await payload.create({
+    collection: 'media',
+    data: { alt: '' },
+    file: { data, mimetype: 'image/jpeg', name, size: data.length },
+  })
+  return doc.id as number
 }
 
 type ProjItem = { id: string; title: string; meta: string; tag?: 'warm' | 'teal' | 'film' | 'bw' }
@@ -169,8 +175,7 @@ const PROOF_IDS = ['1496345875659-11f7dd282d1d', '1534528741775-53994a69daeb', '
 
 async function seed() {
   const payload = await getPayload({ config })
-  const cache = new Map<string, number>()
-  const img = (id: string) => uploadImage(payload, id, cache)
+  const slot = (name: string, id: string) => uploadSlot(payload, name, id)
 
   // 1. Admin user
   const email = process.env.SEED_ADMIN_EMAIL || 'admin@camilosanchez.studio'
@@ -210,9 +215,9 @@ async function seed() {
     },
   })
 
-  const heroId = await img(HERO_ID)
+  const heroId = await slot('home-hero', HERO_ID)
   const proofIds: (number | null)[] = []
-  for (const id of PROOF_IDS) proofIds.push(await img(id))
+  for (let i = 0; i < PROOF_IDS.length; i++) proofIds.push(await slot(`home-proof-${i + 1}`, PROOF_IDS[i]))
   await payload.updateGlobal({
     slug: 'home',
     locale: 'en',
@@ -228,8 +233,14 @@ async function seed() {
   // 4. Disciplines
   for (const d of DISCIPLINES) {
     const projects = []
-    for (const p of d.projects) {
-      projects.push({ image: await img(p.id), title: p.title, meta: p.meta, tag: p.tag })
+    for (let i = 0; i < d.projects.length; i++) {
+      const p = d.projects[i]
+      projects.push({
+        image: await slot(`${d.slug}-project-${i + 1}`, p.id),
+        title: p.title,
+        meta: p.meta,
+        tag: p.tag,
+      })
     }
     await payload.create({
       collection: 'disciplines',
@@ -245,10 +256,12 @@ async function seed() {
         homeBlurb: d.homeBlurb,
         pageBlurb: d.pageBlurb,
         projects,
-        beforeImage: d.beforeId ? await img(d.beforeId) : undefined,
-        afterImage: d.afterId ? await img(d.afterId) : undefined,
+        beforeImage: d.beforeId ? await slot(`${d.slug}-before`, d.beforeId) : undefined,
+        afterImage: d.afterId ? await slot(`${d.slug}-after`, d.afterId) : undefined,
         showreelUrl: d.showreelUrl,
-        showreelPoster: d.showreelPosterId ? await img(d.showreelPosterId) : undefined,
+        showreelPoster: d.showreelPosterId
+          ? await slot(`${d.slug}-poster`, d.showreelPosterId)
+          : undefined,
       },
     })
     console.log(`✓ ${d.title} (${d.projects.length} projects)`)

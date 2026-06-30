@@ -210,7 +210,7 @@ export interface Discipline {
   published?: boolean | null;
   title: string;
   /**
-   * URL slug, e.g. "color-grading". Avoid changing once live.
+   * URL slug — lowercase words joined by hyphens, e.g. "color-grading". No spaces, capitals or accents. Avoid changing once live.
    */
   slug: string;
   /**

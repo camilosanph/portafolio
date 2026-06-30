@@ -1,4 +1,5 @@
 import type { CollectionConfig } from 'payload'
+import { isValidSlug, slugify } from '../../lib/slug'
 
 // The four editorial disciplines (Color Grading, Retouching, Video Editing, AI
 // Video). Fixed in identity (seeded) but fully editable. `feature` selects each
@@ -31,7 +32,21 @@ export const Disciplines: CollectionConfig = {
       required: true,
       unique: true,
       index: true,
-      admin: { description: 'URL slug, e.g. "color-grading". Avoid changing once live.' },
+      // Slugs become URL segments (/es/<slug>). Reject anything that isn't
+      // URL-safe — a value like "Video Reel" produces "/es/Video Reel", which
+      // 404s when the page is opened. Suggest the corrected form in the message.
+      validate: (value: string | null | undefined) => {
+        if (typeof value !== 'string' || value.length === 0) return 'Add a URL slug.'
+        if (!isValidSlug(value)) {
+          const suggestion = slugify(value) || 'color-grading'
+          return `Invalid slug "${value}". Use only lowercase letters, numbers and hyphens — no spaces, capitals or accents. Try: "${suggestion}".`
+        }
+        return true
+      },
+      admin: {
+        description:
+          'URL slug — lowercase words joined by hyphens, e.g. "color-grading". No spaces, capitals or accents. Avoid changing once live.',
+      },
     },
     {
       name: 'order',
