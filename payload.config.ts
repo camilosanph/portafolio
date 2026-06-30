@@ -14,6 +14,7 @@ import { migrations } from './migrations'
 import { Users } from './payload/collections/Users'
 import { Media } from './payload/collections/Media'
 import { Disciplines } from './payload/collections/Disciplines'
+import { Projects } from './payload/collections/Projects'
 import { SiteSettings } from './payload/globals/SiteSettings'
 import { Home } from './payload/globals/Home'
 
@@ -86,7 +87,7 @@ export default buildConfig({
     meta: { titleSuffix: '— Camilo Sanchez' },
   },
   editor: lexicalEditor(),
-  collections: [Users, Media, Disciplines],
+  collections: [Users, Media, Disciplines, Projects],
   globals: [SiteSettings, Home],
   localization: {
     locales: [...LOCALES],

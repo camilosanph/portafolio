@@ -4,7 +4,7 @@ import { isValidSlug, slugify } from '../../lib/slug'
 // The four editorial disciplines (Color Grading, Retouching, Video Editing, AI
 // Video). Fixed in identity (seeded) but fully editable. `feature` selects each
 // discipline's signature module; feature-specific fields show conditionally.
-// `projects` is an embedded array — each discipline owns its own grid.
+// Projects live in their own `projects` collection (related back to a discipline).
 export const Disciplines: CollectionConfig = {
   slug: 'disciplines',
   access: { read: () => true },
@@ -121,34 +121,6 @@ export const Disciplines: CollectionConfig = {
       type: 'upload',
       relationTo: 'media',
       admin: { condition: (data) => data.feature === 'showreel' },
-    },
-    // The project grid
-    {
-      name: 'projects',
-      type: 'array',
-      labels: { singular: 'Project', plural: 'Projects' },
-      admin: { description: 'The grid of work below the signature module.' },
-      fields: [
-        { name: 'image', type: 'upload', relationTo: 'media' },
-        { name: 'title', type: 'text' },
-        {
-          name: 'meta',
-          type: 'text',
-          localized: true,
-          admin: { description: 'Caption meta, e.g. "Short film" or "Brand film · 2:14".' },
-        },
-        {
-          name: 'tag',
-          type: 'select',
-          options: [
-            { label: 'Warm', value: 'warm' },
-            { label: 'Teal', value: 'teal' },
-            { label: 'Film', value: 'film' },
-            { label: 'B & W', value: 'bw' },
-          ],
-          admin: { description: 'Used by the Color Grading filter chips. Optional otherwise.' },
-        },
-      ],
     },
   ],
 }

@@ -1,14 +1,17 @@
 import { getPayload, type Payload } from 'payload'
 import config from '../payload.config'
+import { slugify } from '../lib/slug'
+import { uniqueSlug } from '../lib/projects'
 
 // Seeds Camilo's portfolio with the handoff's placeholder content: an admin
-// login, Site Settings + Home, and the four disciplines with their exact copy,
-// tools, signature features and project grids. Placeholder photography is the
-// brief's Unsplash stock — downloaded once and uploaded into Media so the site
-// looks complete out of the box. Camilo replaces it all in /admin.
+// login, Site Settings + Home, the four disciplines, and their projects (each a
+// cover that opens its own page, with a gallery of photos/videos + an optional
+// description and date). Placeholder photography is the brief's Unsplash stock —
+// downloaded once and uploaded into Media so the site looks complete out of the
+// box. Camilo replaces it all in /admin.
 //
 // Idempotent: re-uses Media by filename (won't duplicate or clobber real
-// uploads) and rebuilds the disciplines collection. Run:
+// uploads) and rebuilds the disciplines + projects collections. Run:
 //   PAYLOAD_SECRET=dev-secret npm run seed
 
 const UNSPLASH = (id: string) =>
@@ -33,8 +36,8 @@ async function fetchBytes(id: string): Promise<Buffer | null> {
 }
 
 // Create a DISTINCT media document per slot (keyed by a stable, readable name
-// like "retouching-before"). This is the important part: every image field on
-// the site points to its OWN media doc, so replacing one image in the admin
+// like "retouching-blush-cover"). This is the important part: every image field
+// on the site points to its OWN media doc, so replacing one image in the admin
 // never changes another image elsewhere — even when the placeholder photo
 // happens to be reused across slots. Idempotent and non-clobbering: re-runs
 // reuse the slot's doc by filename and never touch Camilo's own uploads (which
@@ -61,7 +64,46 @@ async function uploadSlot(payload: Payload, slot: string, id: string): Promise<n
   return doc.id as number
 }
 
-type ProjItem = { id: string; title: string; meta: string; tag?: 'warm' | 'teal' | 'film' | 'bw' }
+// A minimal Lexical editor state (one paragraph) for the richText `description`
+// field — what the admin's editor produces and what the frontend renders.
+function richText(text: string) {
+  return {
+    root: {
+      type: 'root',
+      format: '' as const,
+      indent: 0,
+      version: 1,
+      direction: 'ltr' as const,
+      children: [
+        {
+          type: 'paragraph',
+          format: '',
+          indent: 0,
+          version: 1,
+          direction: 'ltr' as const,
+          children: [
+            { type: 'text', text, format: 0, style: '', mode: 'normal' as const, detail: 0, version: 1 },
+          ],
+        },
+      ],
+    },
+  }
+}
+
+type Tag = 'warm' | 'teal' | 'film' | 'bw'
+type GallerySeed =
+  | { kind: 'image'; id: string; caption?: string }
+  | { kind: 'video'; url: string; posterId?: string; caption?: string }
+  | { kind: 'beforeAfter'; beforeId: string; afterId: string; caption?: string }
+type ProjItem = {
+  id: string
+  title: string
+  meta: string
+  tag?: Tag
+  date?: string
+  description?: string
+  gallery?: GallerySeed[]
+}
 type DiscSeed = {
   title: string
   slug: string
@@ -92,7 +134,20 @@ const DISCIPLINES: DiscSeed[] = [
     pageBlurb:
       'Look development, shot-matching and final grades. From muted film stocks to clean commercial color — each project built around a single, deliberate palette.',
     projects: [
-      { id: '1496345875659-11f7dd282d1d', title: 'NOMAD', meta: 'Short film', tag: 'teal' },
+      {
+        id: '1496345875659-11f7dd282d1d',
+        title: 'NOMAD',
+        meta: 'Short film',
+        tag: 'teal',
+        date: '2025-09-01',
+        description:
+          'Look development and a final filmic grade built around a single deliberate palette — shot-matched across forty setups, from overcast exteriors to lamplit interiors.',
+        gallery: [
+          { kind: 'image', id: '1470071459604-3b5ec3a7fe05', caption: 'Exterior grade' },
+          { kind: 'video', url: SHOWREEL_URL, posterId: '1469474968028-56623f02e42e', caption: 'Grade breakdown' },
+          { kind: 'image', id: '1502823403499-6ccfcf4fb453', caption: 'Interior, lamplit' },
+        ],
+      },
       { id: '1470071459604-3b5ec3a7fe05', title: 'HIGHLANDS', meta: 'Travel', tag: 'film' },
       { id: '1539109136881-3be0616acf4b', title: 'SUNROOM', meta: 'Editorial', tag: 'warm' },
       { id: '1426604966848-d7adac402bff', title: 'GRANITE', meta: 'Commercial', tag: 'teal' },
@@ -116,7 +171,23 @@ const DISCIPLINES: DiscSeed[] = [
     beforeId: '1534528741775-53994a69daeb',
     afterId: '1517841905240-472988babdf9',
     projects: [
-      { id: '1494790108377-be9c29b29330', title: 'BLUSH', meta: 'Beauty' },
+      {
+        id: '1494790108377-be9c29b29330',
+        title: 'BLUSH',
+        meta: 'Beauty',
+        date: '2025-06-01',
+        description:
+          'High-end beauty retouching for an editorial cover — clean skin that keeps texture and tone honest.',
+        gallery: [
+          {
+            kind: 'beforeAfter',
+            beforeId: '1534528741775-53994a69daeb',
+            afterId: '1517841905240-472988babdf9',
+            caption: 'Raw vs. final',
+          },
+          { kind: 'image', id: '1529626455594-4ff0802cfb7e', caption: 'Skin detail' },
+        ],
+      },
       { id: '1438761681033-6461ffad8d80', title: 'LINEN', meta: 'Editorial' },
       { id: '1531746020798-e6953c6e8e04', title: 'CORAL', meta: 'Campaign' },
       { id: '1517841905240-472988babdf9', title: 'INDIGO', meta: 'Portrait' },
@@ -139,7 +210,17 @@ const DISCIPLINES: DiscSeed[] = [
     showreelUrl: SHOWREEL_URL,
     showreelPosterId: '1469474968028-56623f02e42e',
     projects: [
-      { id: '1496345875659-11f7dd282d1d', title: 'NOMAD', meta: 'Brand film · 2:14' },
+      {
+        id: '1496345875659-11f7dd282d1d',
+        title: 'NOMAD',
+        meta: 'Brand film · 2:14',
+        date: '2025-10-01',
+        description: 'Story-first edit, pacing and sound design for a two-minute brand film.',
+        gallery: [
+          { kind: 'video', url: SHOWREEL_URL, posterId: '1496345875659-11f7dd282d1d', caption: 'Full film' },
+          { kind: 'image', id: '1426604966848-d7adac402bff', caption: 'Selected frame' },
+        ],
+      },
       { id: '1470071459604-3b5ec3a7fe05', title: 'HIGHLANDS', meta: 'Travel · 1:48' },
       { id: '1469474968028-56623f02e42e', title: 'DRIFT', meta: 'Music video · 3:22' },
       { id: '1518837695005-2083093ee35b', title: 'TIDE', meta: 'Documentary · 4:05' },
@@ -160,7 +241,17 @@ const DISCIPLINES: DiscSeed[] = [
     showreelUrl: SHOWREEL_URL,
     showreelPosterId: '1542327897-d73f4005b533',
     projects: [
-      { id: '1542327897-d73f4005b533', title: 'SYNTH', meta: 'Gen plate' },
+      {
+        id: '1542327897-d73f4005b533',
+        title: 'SYNTH',
+        meta: 'Gen plate',
+        date: '2025-11-01',
+        description: 'Generative plates and a set extension composited invisibly into live footage.',
+        gallery: [
+          { kind: 'image', id: '1487412720507-e7ab37603c6f', caption: 'Set extension' },
+          { kind: 'video', url: SHOWREEL_URL, posterId: '1542327897-d73f4005b533', caption: 'Process' },
+        ],
+      },
       { id: '1487412720507-e7ab37603c6f', title: 'EXTEND', meta: 'Set extension' },
       { id: '1519699047748-de8e457a634e', title: 'RELIGHT', meta: 'AI relight' },
       { id: '1496345875659-11f7dd282d1d', title: 'INPAINT', meta: 'Cleanup' },
@@ -177,6 +268,34 @@ async function seed() {
   const payload = await getPayload({ config })
   const slot = (name: string, id: string) => uploadSlot(payload, name, id)
 
+  // Build a project's gallery rows, each media slot keyed by project + index so
+  // every image owns its own media doc.
+  async function buildGallery(dSlug: string, pSlug: string, items: GallerySeed[]) {
+    const rows = []
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i]
+      const base = `${dSlug}-${pSlug}-g${i + 1}`
+      if (it.kind === 'image') {
+        rows.push({ kind: 'image' as const, image: await slot(base, it.id), caption: it.caption })
+      } else if (it.kind === 'video') {
+        rows.push({
+          kind: 'video' as const,
+          videoUrl: it.url,
+          videoPoster: it.posterId ? await slot(`${base}-poster`, it.posterId) : undefined,
+          caption: it.caption,
+        })
+      } else {
+        rows.push({
+          kind: 'beforeAfter' as const,
+          beforeImage: await slot(`${base}-before`, it.beforeId),
+          afterImage: await slot(`${base}-after`, it.afterId),
+          caption: it.caption,
+        })
+      }
+    }
+    return rows
+  }
+
   // 1. Admin user
   const email = process.env.SEED_ADMIN_EMAIL || 'admin@camilosanchez.studio'
   const password = process.env.SEED_ADMIN_PASSWORD || 'changeme123'
@@ -192,9 +311,12 @@ async function seed() {
     console.log(`• admin user already exists: ${email}`)
   }
 
-  // 2. Reset the disciplines collection (owned by the seed)
-  const all = await payload.find({ collection: 'disciplines', limit: 500, depth: 0 })
-  for (const doc of all.docs) await payload.delete({ collection: 'disciplines', id: doc.id })
+  // 2. Reset the projects + disciplines collections (owned by the seed). Projects
+  // reference disciplines, so clear projects first.
+  const allProjects = await payload.find({ collection: 'projects', limit: 1000, depth: 0 })
+  for (const doc of allProjects.docs) await payload.delete({ collection: 'projects', id: doc.id })
+  const allDisc = await payload.find({ collection: 'disciplines', limit: 500, depth: 0 })
+  for (const doc of allDisc.docs) await payload.delete({ collection: 'disciplines', id: doc.id })
 
   // 3. Globals
   console.log('… uploading placeholder images (first run only)')
@@ -230,19 +352,9 @@ async function seed() {
   })
   console.log('✓ site settings + home')
 
-  // 4. Disciplines
+  // 4. Disciplines + their projects
   for (const d of DISCIPLINES) {
-    const projects = []
-    for (let i = 0; i < d.projects.length; i++) {
-      const p = d.projects[i]
-      projects.push({
-        image: await slot(`${d.slug}-project-${i + 1}`, p.id),
-        title: p.title,
-        meta: p.meta,
-        tag: p.tag,
-      })
-    }
-    await payload.create({
+    const discipline = await payload.create({
       collection: 'disciplines',
       locale: 'en',
       data: {
@@ -255,7 +367,6 @@ async function seed() {
         gridRatio: d.gridRatio,
         homeBlurb: d.homeBlurb,
         pageBlurb: d.pageBlurb,
-        projects,
         beforeImage: d.beforeId ? await slot(`${d.slug}-before`, d.beforeId) : undefined,
         afterImage: d.afterId ? await slot(`${d.slug}-after`, d.afterId) : undefined,
         showreelUrl: d.showreelUrl,
@@ -264,7 +375,38 @@ async function seed() {
           : undefined,
       },
     })
-    console.log(`✓ ${d.title} (${d.projects.length} projects)`)
+
+    const takenSlugs: string[] = []
+    let made = 0
+    for (let i = 0; i < d.projects.length; i++) {
+      const p = d.projects[i]
+      const pSlug = uniqueSlug(slugify(p.title), takenSlugs)
+      takenSlugs.push(pSlug)
+      const cover = await slot(`${d.slug}-${pSlug}-cover`, p.id)
+      if (cover == null) {
+        console.warn(`  ! skipped ${d.slug}/${pSlug} (cover image failed to download)`)
+        continue
+      }
+      await payload.create({
+        collection: 'projects',
+        locale: 'en',
+        data: {
+          discipline: discipline.id,
+          published: true,
+          order: i,
+          title: p.title,
+          slug: pSlug,
+          cover,
+          meta: p.meta,
+          tag: p.tag,
+          date: p.date,
+          description: p.description ? richText(p.description) : undefined,
+          gallery: p.gallery ? await buildGallery(d.slug, pSlug, p.gallery) : [],
+        },
+      })
+      made++
+    }
+    console.log(`✓ ${d.title} (${made} projects)`)
   }
 
   console.log('\nSeed complete.')

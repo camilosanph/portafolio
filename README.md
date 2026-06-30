@@ -7,10 +7,11 @@ A quiet, image-forward portfolio for **Camilo Sanchez**, a photo & video editor 
 Postgres (prod) / SQLite (local) · Tailwind · TypeScript. Deploys on Vercel.
 
 ```
-/[lang]                  Home — hero, Four Disciplines index, proof strip   (dynamic)
-/[lang]/[discipline]     Discipline page — feature + project grid           (dynamic)
-                         slugs: color-grading · retouching · video-editing · ai-video
-/admin                   Payload Studio — Camilo edits here
+/[lang]                         Home — hero, Four Disciplines index, proof strip  (dynamic)
+/[lang]/[discipline]            Discipline page — feature + project grid          (dynamic)
+                                slugs: color-grading · retouching · video-editing · ai-video
+/[lang]/[discipline]/[project]  Project page — cover, gallery, description, date  (dynamic)
+/admin                          Payload Studio — Camilo edits here
 ```
 
 Each discipline surfaces a **signature feature**: Color Grading → a filterable grid; Retouching →
@@ -53,11 +54,16 @@ Useful scripts: `npm run dev | build | start | lint | typecheck | test | seed | 
    - **Disciplines** — the four pages. Each has a **Published** toggle in the sidebar: turn it off to
      hide a discipline from the site (its page 404s and it's pulled from the home index, nav and contact
      form) while you prepare its content; turn it on to publish. For each: title, slug, tools line, the
-     home + page blurbs, the
-     **signature feature** (filter grid / before-after / showreel) and grid aspect ratio, and the
-     **projects** grid (image + title + meta + an optional colour tag used by the Color Grading filter).
-     Retouching shows **before/after** image fields; the showreel disciplines show a **showreel URL**
-     (YouTube/Vimeo) + a **poster** image. These fields appear only when the matching feature is selected.
+     home + page blurbs, the **signature feature** (filter grid / before-after / showreel) and the grid
+     aspect ratio. Retouching shows **before/after** image fields; the showreel disciplines show a
+     **showreel URL** (YouTube/Vimeo) + a **poster** image. These fields appear only when the matching
+     feature is selected.
+   - **Projects** — the individual works shown in each discipline's grid. A project belongs to one
+     **discipline** and has its own **Published** toggle and order. Its **cover** is the grid tile;
+     opening it (at `/[lang]/[discipline]/[slug]`) shows the **gallery** — any mix of photos, **video**
+     embeds (YouTube/Vimeo) and **before/after** pairs — plus an optional **description** and **date**,
+     the caption **meta**, and the colour **tag** (still used by the Color Grading filter). The slug must
+     be unique within its discipline.
    - **Media** — every photo/poster you upload.
 4. **Languages:** translatable fields (titles, blurbs, taglines, captions) show an **EN/ES** selector.
    Anything left blank in Spanish falls back to English.
