@@ -15,6 +15,24 @@ export function projectHref(lang: string, disciplineSlug: string, projectSlug: s
   return `/${lang}/${disciplineSlug}/${projectSlug}`
 }
 
+// Flatten a Lexical rich-text value to plain text — top-level blocks joined by a
+// space, whitespace collapsed. Used for the project page's meta/OG description.
+export function lexicalToPlainText(data: unknown): string {
+  const root = (data as { root?: { children?: unknown[] } } | null | undefined)?.root
+  if (!root?.children) return ''
+  const textOf = (node: unknown): string => {
+    const n = node as { text?: unknown; children?: unknown[] }
+    if (typeof n.text === 'string') return n.text
+    if (Array.isArray(n.children)) return n.children.map(textOf).join('')
+    return ''
+  }
+  return root.children
+    .map(textOf)
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 type Size = 'thumb' | 'card' | 'hero'
 
 // A raw gallery row as stored on a project (media relations may be ids or

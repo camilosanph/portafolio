@@ -1,5 +1,28 @@
 import { describe, it, expect } from 'vitest'
-import { uniqueSlug, projectHref, toGalleryItem } from '../projects'
+import { uniqueSlug, projectHref, toGalleryItem, lexicalToPlainText } from '../projects'
+
+const lexical = (...paragraphs: string[][]) => ({
+  root: {
+    children: paragraphs.map((texts) => ({
+      type: 'paragraph',
+      children: texts.map((text) => ({ type: 'text', text })),
+    })),
+  },
+})
+
+describe('lexicalToPlainText', () => {
+  it('returns empty string for null/empty', () => {
+    expect(lexicalToPlainText(null)).toBe('')
+    expect(lexicalToPlainText(undefined)).toBe('')
+    expect(lexicalToPlainText({})).toBe('')
+  })
+  it('concatenates inline text within a block', () => {
+    expect(lexicalToPlainText(lexical(['Hello ', 'world']))).toBe('Hello world')
+  })
+  it('joins separate blocks with a space and collapses whitespace', () => {
+    expect(lexicalToPlainText(lexical(['First.'], ['Second.']))).toBe('First. Second.')
+  })
+})
 
 describe('uniqueSlug', () => {
   it('returns the desired slug when free', () => {
