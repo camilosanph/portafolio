@@ -14,6 +14,11 @@ describe('getYouTubeId', () => {
   it('parses watch URLs with extra params', () => {
     expect(getYouTubeId('https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=42s')).toBe('dQw4w9WgXcQ')
   })
+  // Regression: Camilo's actual (unlisted) showreel. Unlisted videos use the
+  // same watch?v= URL shape as public ones and embed fine — must keep working.
+  it('parses the real unlisted showreel URL', () => {
+    expect(getYouTubeId('https://www.youtube.com/watch?v=JYQsVM5FXjU')).toBe('JYQsVM5FXjU')
+  })
   it('returns null for non-YouTube input', () => {
     expect(getYouTubeId('https://example.com/video')).toBeNull()
     expect(getYouTubeId('')).toBeNull()
