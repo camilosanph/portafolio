@@ -70,6 +70,7 @@ export interface Config {
     users: User;
     media: Media;
     disciplines: Discipline;
+    projects: Project;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -80,6 +81,7 @@ export interface Config {
     users: UsersSelect<false> | UsersSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
     disciplines: DisciplinesSelect<false> | DisciplinesSelect<true>;
+    projects: ProjectsSelect<false> | ProjectsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -244,21 +246,83 @@ export interface Discipline {
    */
   showreelUrl?: string | null;
   showreelPoster?: (number | null) | Media;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Individual projects shown in each discipline grid. Each opens its own page.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "projects".
+ */
+export interface Project {
+  id: number;
   /**
-   * The grid of work below the signature module.
+   * When off, this project is hidden from its discipline grid and its URL 404s.
    */
-  projects?:
+  published?: boolean | null;
+  /**
+   * Which discipline this project belongs to.
+   */
+  discipline: number | Discipline;
+  /**
+   * Grid order within the discipline.
+   */
+  order?: number | null;
+  title: string;
+  /**
+   * URL slug — lowercase words joined by hyphens, e.g. "nomad". Unique within the discipline.
+   */
+  slug: string;
+  /**
+   * Main picture — the grid tile and social preview.
+   */
+  cover: number | Media;
+  /**
+   * Caption meta, e.g. "Short film" or "Brand film · 2:14".
+   */
+  meta?: string | null;
+  /**
+   * Used by the Color Grading filter chips. Optional otherwise.
+   */
+  tag?: ('warm' | 'teal' | 'film' | 'bw') | null;
+  /**
+   * Project date — shown as the year on the page.
+   */
+  date?: string | null;
+  /**
+   * Optional write-up shown beside the gallery on the project page.
+   */
+  description?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * More photos/videos shown on the project page, in order.
+   */
+  gallery?:
     | {
+        kind: 'image' | 'video' | 'beforeAfter';
         image?: (number | null) | Media;
-        title?: string | null;
         /**
-         * Caption meta, e.g. "Short film" or "Brand film · 2:14".
+         * YouTube or Vimeo URL.
          */
-        meta?: string | null;
-        /**
-         * Used by the Color Grading filter chips. Optional otherwise.
-         */
-        tag?: ('warm' | 'teal' | 'film' | 'bw') | null;
+        videoUrl?: string | null;
+        videoPoster?: (number | null) | Media;
+        beforeImage?: (number | null) | Media;
+        afterImage?: (number | null) | Media;
+        caption?: string | null;
         id?: string | null;
       }[]
     | null;
@@ -300,6 +364,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'disciplines';
         value: number | Discipline;
+      } | null)
+    | ({
+        relationTo: 'projects';
+        value: number | Project;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -436,13 +504,34 @@ export interface DisciplinesSelect<T extends boolean = true> {
   afterImage?: T;
   showreelUrl?: T;
   showreelPoster?: T;
-  projects?:
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "projects_select".
+ */
+export interface ProjectsSelect<T extends boolean = true> {
+  published?: T;
+  discipline?: T;
+  order?: T;
+  title?: T;
+  slug?: T;
+  cover?: T;
+  meta?: T;
+  tag?: T;
+  date?: T;
+  description?: T;
+  gallery?:
     | T
     | {
+        kind?: T;
         image?: T;
-        title?: T;
-        meta?: T;
-        tag?: T;
+        videoUrl?: T;
+        videoPoster?: T;
+        beforeImage?: T;
+        afterImage?: T;
+        caption?: T;
         id?: T;
       };
   updatedAt?: T;
