@@ -57,18 +57,14 @@ export const Projects: CollectionConfig = {
         const disciplineId =
           data?.discipline && typeof data.discipline === 'object' ? data.discipline.id : data?.discipline
         if (disciplineId && req?.payload) {
-          const dup = await req.payload.find({
-            collection: 'projects',
-            where: {
-              and: [
-                { discipline: { equals: disciplineId } },
-                { slug: { equals: value } },
-                { id: { not_equals: id } },
-              ],
-            },
-            limit: 1,
-            depth: 0,
-          })
+          const and: Record<string, unknown>[] = [
+            { discipline: { equals: disciplineId } },
+            { slug: { equals: value } },
+          ]
+          // On create there is no id yet; only exclude self when updating —
+          // passing `not_equals: undefined` crashes the query driver.
+          if (id != null) and.push({ id: { not_equals: id } })
+          const dup = await req.payload.find({ collection: 'projects', where: { and }, limit: 1, depth: 0 })
           if (dup.docs.length > 0)
             return `Another project in this discipline already uses "${value}". Pick a different slug.`
         }
